@@ -134,39 +134,35 @@ function saveAsMikroTik() {
 // ... (keep existing variables like generatedNumbers, backgroundImage)
 // ... (keep existing DOMContentLoaded listener and other functions like generateNumbers, saveAsExcel, etc.)
 
+// script.js (or within your <script> tag)
+
+// ... (keep existing variables like generatedNumbers, backgroundImage)
+// ... (keep existing DOMContentLoaded listener and other functions like generateNumbers, saveAsExcel, etc.)
+
 function updatePreview() {
     const preview = document.getElementById('preview');
-    preview.innerHTML = '';
+    preview.innerHTML = ''; // Clear previous preview
 
-    if (generatedNumbers.length === 0) return;
+    // Use sample data if no numbers are generated yet, to ensure preview box is drawn
+    const sampleNumberForPreview = (generatedNumbers.length > 0) ? generatedNumbers[0] : "1234567";
+    const sampleSerialForPreview = document.getElementById('serialStartNumber').value || "1";
 
-    // const columns = parseInt(document.getElementById('columns').value); // Not used for single card preview
-    // const rows = parseInt(document.getElementById('rows').value);     // Not used for single card preview
-    const textSize = document.getElementById('textSize').value; // This will be treated as points (pt)
-    const textX = document.getElementById('textPositionX').value; // User input in preview pixels
-    const textY = document.getElementById('textPositionY').value; // User input in preview pixels
+    const textSize = document.getElementById('textSize').value;
+    const textX = document.getElementById('textPositionX').value;
+    const textY = document.getElementById('textPositionY').value;
     const useSerial = document.getElementById('useSerialNumber').checked;
-    const serialSize = document.getElementById('serialNumberSize').value; // points (pt)
+    const serialSize = document.getElementById('serialNumberSize').value;
     const serialX = document.getElementById('serialPositionX').value;
     const serialY = document.getElementById('serialPositionY').value;
-    const serialStart = parseInt(document.getElementById('serialStartNumber').value);
     const useDate = document.getElementById('useDatePrinting').checked;
-    const dateSize = document.getElementById('dateSize').value; // points (pt)
+    const dateSize = document.getElementById('dateSize').value;
     const dateX = document.getElementById('datePositionX').value;
     const dateY = document.getElementById('datePositionY').value;
-    // const boxSpacing = parseFloat(document.getElementById('boxSpacing').value); // Not used for single card preview
 
-    const pageWidth = 210; // A4 width in mm
-    // const pageHeight = 297; // A4 height in mm
-    // const marginX = 5;
-    // const marginY = 5;
-    // const availableWidth = pageWidth - 2 * marginX;
-    // const availableHeight = pageHeight - 2 * marginY;
-
-    // For preview, we calculate boxWidth/Height based on PDF settings to show one card
-    const pdfColumns = parseInt(document.getElementById('columns').value);
-    const pdfRows = parseInt(document.getElementById('rows').value);
-    const pdfBoxSpacing = parseFloat(document.getElementById('boxSpacing').value);
+    // Calculate PDF card dimensions (in mm) to set preview box size
+    const pdfColumns = parseInt(document.getElementById('columns').value) || 1;
+    const pdfRows = parseInt(document.getElementById('rows').value) || 1;
+    const pdfBoxSpacing = parseFloat(document.getElementById('boxSpacing').value) || 0;
     const pdfMarginX = 2; // As used in generatePDF
     const pdfMarginY = 2; // As used in generatePDF
     const pdfPageWidth = 210;
@@ -175,35 +171,34 @@ function updatePreview() {
     const boxWidthMm = ((pdfPageWidth - 2 * pdfMarginX) - (pdfBoxSpacing * (pdfColumns - 1))) / pdfColumns;
     const boxHeightMm = ((pdfPageHeight - 2 * pdfMarginY) - (pdfBoxSpacing * (pdfRows - 1))) / pdfRows;
 
-    // The 'scale' factor was a bit problematic. Let's simplify.
-    // The preview box will be dimensioned in mm, and text positions in px relative to that.
-    // This relies on the browser's interpretation of mm and px.
-
     const box = document.createElement('div');
-    box.className = 'box';
-    // Set preview box dimensions in mm, browser will convert to screen pixels
+    box.className = 'box'; // This is the element whose offsetWidth/Height will be measured
     box.style.width = `${boxWidthMm}mm`;
     box.style.height = `${boxHeightMm}mm`;
+    // Ensure the box is part of the layout flow for offsetWidth/Height to be accurate
+    // It's already part of the flex container 'preview' which should be sufficient.
 
     if (backgroundImage) {
         box.style.backgroundImage = `url(${backgroundImage})`;
     }
 
     const number = document.createElement('div');
-    number.textContent = generatedNumbers[0] || "12345678"; // Show sample if no numbers yet
+    number.textContent = sampleNumberForPreview;
     number.style.position = 'absolute';
-    number.style.left = `${textX}px`;   // User inputs this in pixels
-    number.style.top = `${textY}px`;    // User inputs this in pixels
-    number.style.fontSize = `${textSize}pt`; // Use points for consistency with PDF
+    number.style.left = `${textX}px`;
+    number.style.top = `${textY}px`;
+    number.style.fontSize = `${textSize}pt`;
+    number.style.color = 'red'; // Make preview text distinct if needed for debugging
     box.appendChild(number);
 
     if (useSerial) {
         const serial = document.createElement('div');
-        serial.textContent = serialStart.toString();
+        serial.textContent = sampleSerialForPreview;
         serial.style.position = 'absolute';
         serial.style.left = `${serialX}px`;
         serial.style.top = `${serialY}px`;
-        serial.style.fontSize = `${serialSize}pt`; // Use points
+        serial.style.fontSize = `${serialSize}pt`;
+        serial.style.color = 'red';
         box.appendChild(serial);
     }
 
@@ -214,7 +209,8 @@ function updatePreview() {
         date.style.position = 'absolute';
         date.style.left = `${dateX}px`;
         date.style.top = `${dateY}px`;
-        date.style.fontSize = `${dateSize}pt`; // Use points
+        date.style.fontSize = `${dateSize}pt`;
+        date.style.color = 'red';
         box.appendChild(date);
     }
 
@@ -223,6 +219,33 @@ function updatePreview() {
 
 
 function generatePDF() {
+    if (generatedNumbers.length === 0) {
+        alert("لا توجد أرقام مولدة لإنشاء PDF!");
+        return;
+    }
+
+    const previewBoxElement = document.getElementById('preview').querySelector('.box');
+    if (!previewBoxElement) {
+        alert("عنصر صندوق المعاينة غير موجود. يرجى التأكد من أن المعاينة مرئية.");
+        // Fallback or default if preview isn't available (less accurate)
+        // This part is tricky, ideally preview should always be there.
+        // For now, we'll proceed but positions might be off if this happens.
+        // Consider adding default previewRenderedPxWidth/Height or a more robust fallback.
+        console.warn("Preview box element not found for PDF generation measurements.");
+        // return; // Or use a less accurate fallback
+    }
+
+    // Get the actual rendered pixel dimensions of the preview card
+    // These dimensions are what the user sees and bases their pixel inputs on.
+    const previewRenderedPxWidth = previewBoxElement ? previewBoxElement.offsetWidth : 100; // Fallback width
+    const previewRenderedPxHeight = previewBoxElement ? previewBoxElement.offsetHeight : 50;  // Fallback height
+
+    if (previewRenderedPxWidth === 0 || previewRenderedPxHeight === 0) {
+        alert("صندوق المعاينة ليس له أبعاد (قد يكون مخفيًا). قد تكون المواضع في PDF غير صحيحة.");
+        // Still proceed, but warn user
+    }
+
+
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({
         orientation: 'portrait',
@@ -232,36 +255,30 @@ function generatePDF() {
 
     const columns = parseInt(document.getElementById('columns').value);
     const rows = parseInt(document.getElementById('rows').value);
-    const textSize = parseInt(document.getElementById('textSize').value); // Input is now treated as points
-    const textX = parseFloat(document.getElementById('textPositionX').value); // Input in preview pixels
-    const textY = parseFloat(document.getElementById('textPositionY').value); // Input in preview pixels
+    const textSize = parseInt(document.getElementById('textSize').value);
+    // User inputs for textX, textY etc. are in pixels relative to the preview box
+    const textX_px = parseFloat(document.getElementById('textPositionX').value);
+    const textY_px = parseFloat(document.getElementById('textPositionY').value);
     const useSerial = document.getElementById('useSerialNumber').checked;
-    const serialSize = parseInt(document.getElementById('serialNumberSize').value); // Input as points
-    const serialX = parseFloat(document.getElementById('serialPositionX').value);
-    const serialY = parseFloat(document.getElementById('serialPositionY').value);
+    const serialSize = parseInt(document.getElementById('serialNumberSize').value);
+    const serialX_px = parseFloat(document.getElementById('serialPositionX').value);
+    const serialY_px = parseFloat(document.getElementById('serialPositionY').value);
     const serialStart = parseInt(document.getElementById('serialStartNumber').value);
     const useDate = document.getElementById('useDatePrinting').checked;
-    const dateSize = parseInt(document.getElementById('dateSize').value); // Input as points
-    const dateX = parseFloat(document.getElementById('datePositionX').value);
-    const dateY = parseFloat(document.getElementById('datePositionY').value);
+    const dateSize = parseInt(document.getElementById('dateSize').value);
+    const dateX_px = parseFloat(document.getElementById('datePositionX').value);
+    const dateY_px = parseFloat(document.getElementById('datePositionY').value);
     const boxSpacing = parseFloat(document.getElementById('boxSpacing').value);
 
     const pageWidth = 210;
     const pageHeight = 297;
-    const marginX = 2; // Keep PDF margins as they were
+    const marginX = 2;
     const marginY = 2;
-    const boxWidth = ((pageWidth - 2 * marginX) - (boxSpacing * (columns - 1))) / columns;
-    const boxHeight = ((pageHeight - 2 * marginY) - (boxSpacing * (rows - 1))) / rows;
-
-    const pxToMm = 25.4 / 96; // Standard conversion: 1 inch = 25.4 mm, 96 pixels per inch (common assumption)
+    // These are the target dimensions of one card in the PDF, in mm
+    const pdfCardWidth_mm = ((pageWidth - 2 * marginX) - (boxSpacing * (columns - 1))) / columns;
+    const pdfCardHeight_mm = ((pageHeight - 2 * marginY) - (boxSpacing * (rows - 1))) / rows;
 
     const today = new Date().toISOString().split('T')[0];
-
-    // It's good practice to ensure a font is loaded/set, especially for Arabic.
-    // jsPDF's default fonts might not have good Arabic support.
-    // This example doesn't include custom font embedding, which is a more advanced topic
-    // but crucial for non-Latin scripts if default fonts fail.
-    // For now, we rely on jsPDF's default or system fallback for Arabic.
 
     for (let i = 0; i < generatedNumbers.length; i++) {
         if (i > 0 && i % (columns * rows) === 0) {
@@ -271,45 +288,48 @@ function generatePDF() {
         const col = i % columns;
         const row = Math.floor((i % (columns * rows)) / columns);
 
-        const currentCardX = marginX + col * (boxWidth + boxSpacing);
-        const currentCardY = marginY + row * (boxHeight + boxSpacing);
+        const currentCardOriginX_mm = marginX + col * (pdfCardWidth_mm + boxSpacing);
+        const currentCardOriginY_mm = marginY + row * (pdfCardHeight_mm + boxSpacing);
 
-        pdf.rect(currentCardX, currentCardY, boxWidth, boxHeight);
+        pdf.rect(currentCardOriginX_mm, currentCardOriginY_mm, pdfCardWidth_mm, pdfCardHeight_mm);
 
         if (backgroundImage) {
             try {
-                pdf.addImage(backgroundImage, 'JPEG', currentCardX, currentCardY, boxWidth, boxHeight);
+                pdf.addImage(backgroundImage, 'JPEG', currentCardOriginX_mm, currentCardOriginY_mm, pdfCardWidth_mm, pdfCardHeight_mm);
             } catch (e) {
                 console.error("Error adding background image to PDF:", e);
-                // Optionally, draw a placeholder or skip if image is problematic
             }
         }
 
+        // --- Calculate proportional offsets for PDF ---
+        // The user's textX_px is an offset within a box of previewRenderedPxWidth.
+        // We want the same proportional offset within a PDF box of pdfCardWidth_mm.
+        const scaleX = (previewRenderedPxWidth > 0) ? (pdfCardWidth_mm / previewRenderedPxWidth) : 0;
+        const scaleY = (previewRenderedPxHeight > 0) ? (pdfCardHeight_mm / previewRenderedPxHeight) : 0;
+
         // Main number
-        pdf.setFontSize(textSize); // textSize is now in points
-        // Convert pixel-based textX/textY from preview to mm for PDF
-        // Use { baseline: 'top' } to align text from its top edge
+        pdf.setFontSize(textSize); // textSize is in points
         pdf.text(generatedNumbers[i],
-                 currentCardX + (textX * pxToMm),
-                 currentCardY + (textY * pxToMm),
-                 { baseline: 'top', lang: 'ar' }); // Added lang: 'ar' for better Arabic handling if supported by font
+                 currentCardOriginX_mm + (textX_px * scaleX),
+                 currentCardOriginY_mm + (textY_px * scaleY),
+                 { baseline: 'top', lang: 'ar', align: 'right' }); // Test with align: 'right' if numbers still shift left
 
         // Serial number
         if (useSerial) {
             pdf.setFontSize(serialSize); // serialSize is in points
             pdf.text((serialStart + i).toString(),
-                     currentCardX + (serialX * pxToMm),
-                     currentCardY + (serialY * pxToMm),
-                     { baseline: 'top', lang: 'ar' });
+                     currentCardOriginX_mm + (serialX_px * scaleX),
+                     currentCardOriginY_mm + (serialY_px * scaleY),
+                     { baseline: 'top', lang: 'ar', align: 'right' });
         }
 
         // Date
         if (useDate) {
             pdf.setFontSize(dateSize); // dateSize is in points
             pdf.text(today,
-                     currentCardX + (dateX * pxToMm),
-                     currentCardY + (dateY * pxToMm),
-                     { baseline: 'top', lang: 'ar' });
+                     currentCardOriginX_mm + (dateX_px * scaleX),
+                     currentCardOriginY_mm + (dateY_px * scaleY),
+                     { baseline: 'top', lang: 'ar', align: 'right' });
         }
     }
 
